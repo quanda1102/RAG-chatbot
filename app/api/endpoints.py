@@ -31,13 +31,26 @@ async def ask_question(question: Question):
             
             async for event in result.stream_events():
                 if event.type == "raw_response_event" and isinstance(event, RawResponsesStreamEvent):
-                    # Check if the data has delta attribute for text content
-                    if hasattr(event.data, 'delta'):
-                        delta = event.data.delta
-                        full_response += delta
+                    if hasattr(event.data, 'type'):
+                        # Handle user-facing text content
+                        if (hasattr(event.data, 'delta') and 
+                            event.data.type == 'response.output_text.delta'):
+                            
+                            delta = event.data.delta
+                            full_response += delta
+                            
+                            # Send character delta event
+                            yield f"data: {json.dumps({'type': 'delta', 'content': delta})}\n\n"
                         
-                        # Send character delta event
-                        yield f"data: {json.dumps({'type': 'delta', 'content': delta})}\n\n"
+                        # Handle function call events
+                        elif event.data.type == 'response.function_call_arguments.delta':
+                            # Send function call delta event
+                            function_delta = event.data.delta if hasattr(event.data, 'delta') else ""
+                            yield f"data: {json.dumps({'type': 'function_call', 'content': function_delta})}\n\n"
+                        
+                        elif event.data.type == 'response.function_call_arguments.done':
+                            # Send function call completion event
+                            yield f"data: {json.dumps({'type': 'function_call_complete'})}\n\n"
             
             # Save the complete response
             ai_memory.save_llm_response(question.session_id, full_response)
