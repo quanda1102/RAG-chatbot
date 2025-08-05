@@ -17,7 +17,6 @@ class RAGService:
         question_vector = embedder_service.create_embedding(question)
 
         context_documents = qdrant_service.search_documents(question_vector)
-        context = "\n---\n".join(context_documents)
         return context_documents
 
 

@@ -16,6 +16,8 @@ async def ask_question(question: Question):
     """
     async def generate_sse():
         try:
+            last_conversations = ai_memory.get_last_n_conversations(question.session_id) or "Chưa có gì cả"
+            print(last_conversations)
             ai_memory.save_user_input(question.session_id, question.question)
             
             # Use regular run with streaming callback
@@ -27,7 +29,7 @@ async def ask_question(question: Question):
                 return f"data: {delta_text}\n\n"
             
             # Get streamed result
-            result = Runner.run_streamed(agent, input=question.question)
+            result = Runner.run_streamed(agent, input=f"Thông tin từ bộ nhớ: {last_conversations}\n\nCâu hỏi: {question.question}")
             
             async for event in result.stream_events():
                 if event.type == "raw_response_event" and isinstance(event, RawResponsesStreamEvent):
