@@ -20,13 +20,11 @@ async def ask_question(question: Question):
             print(last_conversations)
             ai_memory.save_user_input(question.session_id, question.question)
             
-            # Use regular run with streaming callback
+            # Initialize streaming state
             full_response = ""
             
-            def stream_callback(delta_text):
-                nonlocal full_response
-                full_response += delta_text
-                return f"data: {delta_text}\n\n"
+            # Send start event
+            yield f"data: {json.dumps({'type': 'start', 'message': 'Starting response generation'})}\n\n"
             
             # Get streamed result
             result = Runner.run_streamed(agent, input=f"Thông tin từ bộ nhớ: {last_conversations}\n\nCâu hỏi: {question.question}")
@@ -38,18 +36,18 @@ async def ask_question(question: Question):
                         delta = event.data.delta
                         full_response += delta
                         
-                        # Send only the text delta as SSE data
-                        yield f"data: {delta}\n\n"
+                        # Send character delta event
+                        yield f"data: {json.dumps({'type': 'delta', 'content': delta})}\n\n"
             
             # Save the complete response
             ai_memory.save_llm_response(question.session_id, full_response)
             
-            # Send completion signal
-            yield "data: [DONE]\n\n"
+            # Send completion event with full response
+            yield f"data: {json.dumps({'type': 'complete', 'full_response': full_response})}\n\n"
             
         except Exception as e:
-            # Send error as plain text
-            yield f"data: Error: {str(e)}\n\n"
+            # Send error event
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
     
     return StreamingResponse(
         generate_sse(),
