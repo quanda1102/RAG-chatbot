@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from app.api.endpoints import router as api_router
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 load_dotenv()
 
@@ -8,6 +9,14 @@ app = FastAPI(
     title="RAG Chatbot API",
     description="API for a RAG (Retrieval-Augmented Generation) Chatbot using Qdrant and OpenAI.",
     version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(api_router)
